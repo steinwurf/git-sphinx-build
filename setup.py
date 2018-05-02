@@ -55,21 +55,15 @@ def find_version():
     wscript_VERSION = file_find_version(
         filepath=os.path.join(cwd, 'wscript'))
 
-    wurfdocs_VERSION = file_find_version(
-        filepath=os.path.join(cwd, 'src/wurfdocs/wurfdocs_directive.py'))
-
-    if wscript_VERSION != wurfdocs_VERSION:
-        sys.exit('Version mismatch wscript and src/wurfdocs/wurfdocs_directive.py')
-
     return wscript_VERSION
 
 
 VERSION = find_version()
 
 setup(
-    name='wurfdocs',
+    name='git-sphinx-build',
     version=VERSION,
-    description=('C++ Documentation generator.'),
+    description=("Wrapper for Sphinx's sphinx-build command."),
     long_description=long_description,
     url='https://github.com/steinwurf/',
     author='Steinwurf ApS',
@@ -96,17 +90,10 @@ setup(
         'Topic :: Utilities',
     ],
     entry_points={
-        'console_scripts': ['wurfdocs=wurfdocs.wurfdocs_directive:main'],
+        'console_scripts': ['git_sphinx_build=git_sphinx_build.__main__:main'],
     },
-    keywords=('wurfdocs'),
+    keywords=('git-sphinx-build'),
     packages=find_packages(where='src', exclude=['test']),
     package_dir={"": "src"},
-    # How to include data in a package? We use the approach
-    # outlined here https://stackoverflow.com/a/14211600 more
-    # documentation on this:
-    # http://setuptools.readthedocs.io/en/latest/setuptools.html#including-data-files
-    #
-    package_data={"wurfdocs": ["template_files/*"]},
 
-    install_requires=['pyquery', 'python-archive'],
 )
