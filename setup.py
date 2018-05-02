@@ -90,10 +90,11 @@ setup(
         'Topic :: Utilities',
     ],
     entry_points={
-        'console_scripts': ['git_sphinx_build=git_sphinx_build.__main__:main'],
+        'console_scripts': ['git_sphinx_build=git_sphinx_build.__main__:cli'],
     },
     keywords=('git-sphinx-build'),
     packages=find_packages(where='src', exclude=['test']),
     package_dir={"": "src"},
+    install_requires=['click'],
 
 )

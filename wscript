@@ -128,8 +128,8 @@ def _pytest(bld):
         os.makedirs(basetemp)
 
         # If we need to be able to run doxygen from the system
-        # venv.env['PATH'] = os.path.pathsep.join(
-        #    [venv.env['PATH'], os.environ['PATH']])
+        venv.env['PATH'] = os.path.pathsep.join(
+            [venv.env['PATH'], os.environ['PATH']])
 
         # Main test command
         command = 'python -B -m pytest {} --basetemp {}'.format(
