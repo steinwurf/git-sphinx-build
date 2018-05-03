@@ -5,7 +5,7 @@ import os
 import re
 
 
-class Git(object):
+class GitRun(object):
 
     def __init__(self, git_binary, run):
         """ Construct a new Git instance.
@@ -56,6 +56,14 @@ class Git(object):
         args = [self.git_binary, 'pull']
         self.run(args, cwd=cwd)
 
+    def fetch(self, cwd):
+        """
+        Runs 'git fetch' in the directory cwd
+        """
+
+        args = [self.git_binary, 'fetch']
+        self.run(args, cwd=cwd)
+
     def branch(self, cwd):
         """
         Runs 'git branch' and returns the current branch and a list of
@@ -66,6 +74,30 @@ class Git(object):
 
         branch = result.stdout.split('\n')
         branch = [b for b in branch if b != '']
+
+        current = ''
+        others = []
+
+        for b in branch:
+            if b.startswith('*'):
+                current = b[1:].strip()
+            else:
+                others.append(b)
+
+        if current == '':
+            raise RuntimeError('Failed to locate current branch')
+
+        return current, others
+
+    def remote_branch(self, cwd):
+        """
+        Runs 'git branch -r' and returns the remote branchs
+        """
+        args = [self.git_binary, 'branch', 'r']
+        result = self.run(args, cwd=cwd)
+
+        branchs = result.stdout.split('\n')
+        branchs = [b for b in branchs if b != '']
 
         current = ''
         others = []

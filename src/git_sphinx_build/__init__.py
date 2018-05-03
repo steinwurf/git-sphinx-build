@@ -1,2 +1,2 @@
 from command import run
-from git import Git
+from git_run import GitRun
