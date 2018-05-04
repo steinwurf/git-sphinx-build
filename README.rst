@@ -8,7 +8,7 @@ Developer docs
 ==============
 
 * If a developer is currently working on the docs he should
-  be able to build locally his changes. 
+  be able to build locally his changes.
 
 Build types
 -----------
@@ -17,20 +17,27 @@ Build types
 2. "remote" build
    1. Tag
    2. Branch
-  
+
 * If the repository is a path
-  
-  1. Copy it over and make a "workingtree" build 
+
+  1. Copy it over and make a "workingtree" build
   2. Run the remote builds
 
 A build returns the following dict::
 
-    build = { 
+    build = {
         'type': 'workingtree' | 'branch' | 'tag',
         'sha1': commit-id,
-        'name':
-        'path': 
-        'build_path': 
+        'name': string
+        'directory': string,
+        'build_path: string
     }
 
-If the repository is a path 
+The cache will contain the following::
+
+  stub-8423ds.json = {
+      'builds' : [
+          build,
+          build
+      ]
+  }
