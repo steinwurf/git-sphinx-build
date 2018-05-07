@@ -78,7 +78,7 @@ class Sphinx(object):
 
 class BuildDirectory(object):
 
-    def __init__(self, source_path, build_path, sphinx):
+    def __init__(self, sphinx, log):
         """
         : param build_path: The path to the build directory as a string. The
             build directory is where the build files(HTML) will be generated.
@@ -86,28 +86,26 @@ class BuildDirectory(object):
             build_path.
         :param runner: A command.run function.
         """
-        self.source_path = source_path
-        self.build_path = build_path
         self.sphinx = sphinx
+        self.log = log
 
-        assert os.path.isdir(self.source_path)
-        assert os.path.isdir(self.build_path)
-
-    def run(self, cwd, **kwargs):
-
-        outputdir = os.path.join(self.build_path, 'workingtree')
+    def run(self, source_path, output_path, cwd, **kwargs):
 
         try:
 
-            self.sphinx.build(sourcedir=self.workingtree_path,
-                              outputdir=outputdir, cwd=cwd, **kwargs)
+            self.sphinx.build(sourcedir=source_path,
+                              outputdir=output_path, cwd=cwd, **kwargs)
 
-        return self.html_path
+        except run_error.RunError as re:
+            self.log.debug(re)
+            return None
+
+        return self.outputdir
 
 
 class BuildWorkingTree(object):
 
-    def __init__(self, workingtree_path, build_path, sphinx, log):
+    def __init__(self, build_directory):
         """
         : param build_path: The path to the build directory as a string. The
             build directory is where the build files(HTML) will be generated.
@@ -115,29 +113,17 @@ class BuildWorkingTree(object):
             build_path.
         :param runner: A command.run function.
         """
-        self.workingtree_path = workingtree_path
-        self.build_path = build_path
-        self.sphinx = sphinx
-
-        assert os.path.isdir(self.workingtree_path)
-        assert os.path.isdir(self.build_path)
+        self.build_directory = build_directory
 
     def run(self, cwd, **kwargs):
 
-        outputdir = os.path.join(self.build_path, 'workingtree')
-
-        try:
-
-            self.sphinx.build(sourcedir=self.workingtree_path,
-                              outputdir=outputdir, cwd=cwd, **kwargs)
-        except run_error.RunError as re:
-
-        return self.html_path
+        return self.build_directory.run(
+            build_dir='workingtree', cwd=cwd)
 
 
 class BuildGit(object):
 
-    def __init__(self, repository_path, build_path, category, checkout, git, runner):
+    def __init__(self, build_directory, checkout, git):
         """
         : param build_path: The path to the build directory as a string. The
             build directory is where the build files(HTML) will be generated.
@@ -145,19 +131,11 @@ class BuildGit(object):
             build_path.
         :param runner: A command.run function.
         """
-        self.repository_path = repository_path
-        self.build_path = build_path
-        self.runner = runner
+        self.build_directory = build_directory
         self.git = git
-        self.category = category
         self.checkout = checkout
-        self.name = checkout
-        self.html_path = os.path.join(self.build_path, self.name)
 
-        assert os.path.isdir(self.repository_path)
-        assert os.path.isdir(build_path)
-
-    def run(self, **kwargs):
+    def run(self, cwd, **kwargs):
 
         self.git.checkout(branch=self.checkout, cwd=self.repository_path)
 
