@@ -64,40 +64,23 @@ class GitRun(object):
         args = [self.git_binary, 'fetch']
         self.run(args, cwd=cwd)
 
-    def branch(self, cwd):
+    def branch(self, cwd, remote):
         """
         Runs 'git branch' and returns the current branch and a list of
         additional branches
         """
         args = [self.git_binary, 'branch']
+
+        if remote:
+            args.append('-r')
+
         result = self.run(args, cwd=cwd)
 
         branch = result.stdout.split('\n')
         branch = [b for b in branch if b != '']
 
-        current = ''
-        others = []
-
-        for b in branch:
-            if b.startswith('*'):
-                current = b[1:].strip()
-            else:
-                others.append(b)
-
-        if current == '':
-            raise RuntimeError('Failed to locate current branch')
-
-        return current, others
-
-    def remote_branch(self, cwd):
-        """
-        Runs 'git branch -r' and returns the remote branchs
-        """
-        args = [self.git_binary, 'branch', 'r']
-        result = self.run(args, cwd=cwd)
-
-        branchs = result.stdout.split('\n')
-        branchs = [b for b in branchs if b != '']
+        if remote:
+            return branch
 
         current = ''
         others = []

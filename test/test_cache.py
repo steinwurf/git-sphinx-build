@@ -6,6 +6,5 @@ def test_cache(testdirectory):
 
     testdir = testdirectory.mkdir('testdir')
 
-    c = Cache(cache_path=testdirectory.path(), unique_name='std-93242')
-    c.update(sha1='32423', path=testdir.path())
-    del c
+    with Cache(cache_path=testdirectory.path(), unique_name='std-932') as c:
+        c.update(sha1='32423', path=testdir.path())

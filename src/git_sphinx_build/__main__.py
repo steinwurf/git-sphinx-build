@@ -1,6 +1,7 @@
 from . import command
 from . import git_run
 from . import git_url_parser
+from . import cache
 
 import click
 import tempfile
@@ -57,32 +58,43 @@ class Repository(object):
             self.git.clone(repository=git_url,
                            directory=self.repository_path, cwd=clone_path)
 
+    def tags(self):
+        return self.git.tags(cwd=self.repository_path)
 
-class Cache(object):
-
-    def __init__(self):
-        pass
+    def branches(self):
+        return self.git.branch(cwd=self.repository_path, remote=True)
 
 
 @click.command()
 @click.argument('repository')
 @click.option('--clone_path')
-#@click.option('--build_path')
+@click.option('--build_path')
 #@click.option('--remote_only')
-def cli(repository, clone_path):
+def cli(repository, clone_path, build_path):
 
     git = git_run.GitRun(git_binary='git', run=command.run)
     parser = git_url_parser.GitUrlParser()
 
     r = Repository(git=git, git_url_parser=parser, log="ok")
 
-    # r.prepare(repository=repository, clone_path=clone_path)
+    r.prepare(repository=repository, clone_path=clone_path)
 
-    # #
-    # tasks = []
+    build = cache.Build(build_path=build_path, git=git, runner=command.run)
 
-    # if r.workingtree_path:
-    #     tasks.push(BuildWorkingtree(path=r.workingtree_path))
+    builds = []
+
+    if r.workingtree_path:
+        builds.append(build.workingtree(workingtree_path=r.workingtree_path))
+
+    for tag in r.tags():
+        builds.append(build.tag(repository_path=r.repository_path, tag=tag))
+
+    for branch in r.branches():
+        builds.append(
+            build.branch(repository_path=r.repository_path, branch=branch))
+
+    for b in builds:
+        b.run()
 
     # for tags in r.tags():
     #     tasks.push(BuildTag(path=r.repository_path, tag=tag))
