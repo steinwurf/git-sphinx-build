@@ -4,17 +4,19 @@
 import os
 import re
 
+from . import command
+
 
 class GitRun(object):
 
-    def __init__(self, git_binary, run):
+    def __init__(self, git_binary='git', runner=command.run):
         """ Construct a new Git instance.
 
         :param git_binary: A string containing the path to a git executable.
         :param ctx: A Waf Context instance.
         """
         self.git_binary = git_binary
-        self.run = run
+        self.runner = runner
 
     def version(self, cwd):
         """
@@ -26,7 +28,7 @@ class GitRun(object):
             we just extract the integers i.e. (1.8.1.1)
         """
         args = [self.git_binary, 'version']
-        result = self.run(args, cwd=cwd)
+        result = self.runner(args, cwd=cwd)
 
         int_list = [int(s) for s in re.findall('\\d+', result.stdout)]
         return tuple(int_list)
@@ -37,7 +39,7 @@ class GitRun(object):
         commit currently checked out into the working copy.
         """
         args = [self.git_binary, 'rev-parse', 'HEAD']
-        result = self.run(args, cwd=cwd)
+        result = self.runner(args, cwd=cwd)
 
         return result.stdout.strip()
 
@@ -46,7 +48,7 @@ class GitRun(object):
         Runs 'git clone <repository> <directory>' in the directory cwd.
         """
         args = [self.git_binary, 'clone', repository, directory]
-        self.run(args, cwd=cwd)
+        self.runner(args, cwd=cwd)
 
     def pull(self, cwd):
         """
@@ -54,7 +56,7 @@ class GitRun(object):
         """
 
         args = [self.git_binary, 'pull']
-        self.run(args, cwd=cwd)
+        self.runner(args, cwd=cwd)
 
     def fetch(self, all, cwd):
         """
@@ -66,7 +68,7 @@ class GitRun(object):
         if all:
             args.append('--all')
 
-        self.run(args, cwd=cwd)
+        self.runner(args, cwd=cwd)
 
     def branch(self, cwd, remote):
         """
@@ -78,7 +80,7 @@ class GitRun(object):
         if remote:
             args.append('-r')
 
-        result = self.run(args, cwd=cwd)
+        result = self.runner(args, cwd=cwd)
 
         if remote:
             return self._parse_branch_remote(result=result)
@@ -128,7 +130,7 @@ class GitRun(object):
         args.append(branch)
         args.append('--')
 
-        self.run(args, cwd=cwd)
+        self.runner(args, cwd=cwd)
 
     def current_branch(self, cwd):
         """
@@ -158,7 +160,7 @@ class GitRun(object):
         Runs 'git checkout branch'
         """
         args = [self.git_binary, 'checkout', branch]
-        self.run(args, cwd=cwd)
+        self.runner(args, cwd=cwd)
 
     def has_submodules(run, cwd):
         """
@@ -172,21 +174,21 @@ class GitRun(object):
         Runs 'git submodule sync' in the directory cwd
         """
         args = [self.git_binary, 'submodule', 'sync']
-        self.run(args, cwd=cwd)
+        self.runner(args, cwd=cwd)
 
     def init_submodules(self, cwd):
         """
         Runs 'git submodule init' in the directory cwd
         """
         args = [self.git_binary, 'submodule', 'init']
-        self.run(args, cwd=cwd)
+        self.runner(args, cwd=cwd)
 
     def update_submodules(self, cwd):
         """
         Runs 'git submodule update' in the directory cwd
         """
         args = [self.git_binary, 'submodule', 'update']
-        self.run(args, cwd=cwd)
+        self.runner(args, cwd=cwd)
 
     def pull_submodules(self, cwd):
         """
@@ -205,7 +207,7 @@ class GitRun(object):
         :param cwd: The current working directory as a string
         """
         args = [self.git_binary, 'tag', '-l']
-        result = self.run(args, cwd=cwd)
+        result = self.runner(args, cwd=cwd)
 
         tags = result.stdout.split('\n')
         return [t for t in tags if t != '']
@@ -218,6 +220,6 @@ class GitRun(object):
         :param cwd: The current working directory as a string
         """
         args = [self.git_binary, 'config', '--get', 'remote.origin.url']
-        result = self.run(args, cwd=cwd)
+        result = self.runner(args, cwd=cwd)
 
         return result.stdout.strip()

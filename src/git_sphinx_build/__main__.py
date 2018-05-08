@@ -8,6 +8,7 @@ import click
 import tempfile
 import hashlib
 import os
+import logging
 
 
 class Repository(object):
@@ -78,9 +79,11 @@ class Repository(object):
 #@click.option('--remote_only')
 def cli(repository, clone_path, build_path):
 
-    # logging.basicConfig(filename='example.log',level=logging.DEBUG)
+    logging.basicConfig(filename='git_sphinx_build.log', level=logging.DEBUG)
 
-    git = git_run.GitRun(git_binary='git', run=command.run)
+    log = logging.getLogger(__name__)
+
+    git = git_run.GitRun(git_binary='git', runner=command.run)
     parser = git_url_parser.GitUrlParser()
 
     sphinx = cache.Sphinx(runner=command.run)
@@ -117,7 +120,7 @@ def cli(repository, clone_path, build_path):
                 print(result)
 
             except run_error.RunError as re:
-                print(re)
+                log.debug(re)
 
 
 if __name__ == "__main__":

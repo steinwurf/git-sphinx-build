@@ -95,6 +95,6 @@ setup(
     keywords=('git-sphinx-build'),
     packages=find_packages(where='src', exclude=['test']),
     package_dir={"": "src"},
-    install_requires=['click', 'sphinx'],
+    install_requires=['click'],
 
 )
