@@ -10,5 +10,5 @@ def test_build(testdirectory):
 
     r = testdirectory.run(cmd)
     print(r)
-    assert 0
-    pass
+    #assert 0
+    # pass

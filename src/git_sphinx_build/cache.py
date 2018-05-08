@@ -68,13 +68,28 @@ class Sphinx(object):
         """
         self.runner = runner
 
-    def build(self, source_path, output_path, cwd, **kwargs):
+    def build(self, source_path, output_path, cwd):
+
+        assert os.path.isdir(source_path)
+        assert os.path.isdir(cwd)
 
         # Running sphinx-build will fail if the repository does
         # not have working docs for the given branch, tag etc.
+        docs_path = self.find_configuration(source_path=source_path)
 
-        args = ['sphinx-build', '-b', 'html', source_path, output_path]
-        self.runner(args, cwd=cwd)
+        if not os.path.isdir(output_path):
+            os.makedirs(output_path)
+
+        command = ['sphinx-build', '-b', 'html', docs_path, output_path]
+        self.runner(command=command, cwd=cwd)
+
+    def find_configuration(self, source_path):
+
+        for root, _, filenames in os.walk(source_path):
+            if 'conf.py' in filenames:
+                return root
+
+        raise run_error.RunError("No conf.py")
 
 
 class WorkingtreeTask(object):
@@ -137,10 +152,6 @@ class GitTask(object):
 
         # https://stackoverflow.com/a/8888015/1717320
         self.git.reset(branch=self.checkout, hard=True, cwd=cwd)
-
-        print(self.build_path)
-        print(self.checkout_type)
-        print(self.checkout)
 
         output_path = os.path.join(
             self.build_path, self.checkout_type, self.checkout)

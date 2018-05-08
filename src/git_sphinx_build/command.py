@@ -15,6 +15,7 @@ def run(command, cwd, **kwargs):
     :param kwargs: Keyword arguments passed to Popen(...)
     :return: A RunResult object representing the result of the command
     """
+    print(str(command))
 
     if isinstance(command, compat.string_type):
         kwargs['shell'] = True

@@ -80,11 +80,30 @@ class GitRun(object):
 
         result = self.run(args, cwd=cwd)
 
+        if remote:
+            return self._parse_branch_remote(result=result)
+        else:
+            return self._parse_branch_local(result=result)
+
+    def _parse_branch_remote(self, result):
+
         branch = result.stdout.split('\n')
         branch = [b.strip() for b in branch if b != '']
 
-        if remote:
-            return branch
+        parsed = []
+
+        for b in branch:
+            if 'origin/HEAD ->' in b:
+                b = b.replace('origin/HEAD ->', '')
+
+            parsed.append(b.strip())
+
+        return None, parsed
+
+    def _parse_branch_local(self, result):
+
+        branch = result.stdout.split('\n')
+        branch = [b.strip() for b in branch if b != '']
 
         current = ''
         others = []

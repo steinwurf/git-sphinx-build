@@ -63,7 +63,12 @@ class Repository(object):
         return self.git.tags(cwd=self.repository_path)
 
     def branches(self):
-        return self.git.branch(cwd=self.repository_path, remote=True)
+        _, remote = self.git.branch(cwd=self.repository_path, remote=True)
+
+        # Remote branches look like origin/master, origin/some_branch etc.
+        # We flatten this.
+
+        return remote
 
 
 @click.command()
@@ -72,6 +77,8 @@ class Repository(object):
 @click.option('--build_path')
 #@click.option('--remote_only')
 def cli(repository, clone_path, build_path):
+
+    # logging.basicConfig(filename='example.log',level=logging.DEBUG)
 
     git = git_run.GitRun(git_binary='git', run=command.run)
     parser = git_url_parser.GitUrlParser()
@@ -111,69 +118,6 @@ def cli(repository, clone_path, build_path):
 
             except run_error.RunError as re:
                 print(re)
-
-    # for tags in r.tags():
-    #     tasks.push(BuildTag(path=r.repository_path, tag=tag))
-
-    # for branch in r.branches():
-    #     tasks.push(BuildBranch(path=r.repository_path, branch=branch))
-
-    # c = Cache(path=clone_path, url=repository)
-
-    # versions = {}
-
-    # for build in builds:
-
-    #     if build.type == 'workingtree':
-    #         path = build.run()
-    #         name = bulid,name()
-
-    #     sha1 = build.sha1
-
-    #     if cache.match(sha1=sha1):
-    #         path = cache.path(sha1=sha1)
-    #         name = build.name()
-
-    #     else:
-    #         path = build.run()
-    #         cache.update(sha1=sha1, path=path)
-
-    #     versions =
-
-    # for task in tasks:
-
-    # current_branch, other_branches = git.branch(cwd=repo_dir)
-    # tags = git.tags(cwd=repo_dir)
-
-    # checkouts = [current_branch] + other_branches + tags
-    # checkouts = [c.strip() for c in checkouts]
-
-    # print(checkouts)
-
-    # for checkout in checkouts:
-
-    #     checkout_path = os.path.join(build_dir, 'checkouts', checkout)
-
-    #     if os.path.isdir(checkout_path):
-    #         remove_directory(path=checkout_path)
-
-    #     shutil.copytree(src=cwd, dst=checkout_path, symlinks=True)
-
-    #     args = ['git', 'checkout', '-f', checkout]
-    #     ctx.cmd_and_log(args, cwd=checkout_path)
-
-    #     docs_path = os.path.join(build_dir, 'docs', checkout)
-
-    #     try:
-
-    #         venv.run('sphinx-build --no-color -w log.txt -b html docs {}'.format(
-    #             docs_path), cwd=checkout_path)
-
-    #     except Exception:
-    #         continue
-
-    # print("Current branch {}".format(
-    #     git.current_branch(cwd=ctx.path.abspath())))
 
 
 if __name__ == "__main__":
