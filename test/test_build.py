@@ -9,6 +9,6 @@ def test_build(testdirectory):
            '--build_path', build_dir.path()]
 
     r = testdirectory.run(cmd)
-    # print(r)
-    #assert 0
+    print(r)
+    assert 0
     pass

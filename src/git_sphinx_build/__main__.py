@@ -2,6 +2,7 @@ from . import command
 from . import git_run
 from . import git_url_parser
 from . import cache
+from . import run_error
 
 import click
 import tempfile
@@ -75,26 +76,41 @@ def cli(repository, clone_path, build_path):
     git = git_run.GitRun(git_binary='git', run=command.run)
     parser = git_url_parser.GitUrlParser()
 
-    r = Repository(git=git, git_url_parser=parser, log="ok")
+    sphinx = cache.Sphinx(runner=command.run)
 
-    r.prepare(repository=repository, clone_path=clone_path)
+    repo = Repository(git=git, git_url_parser=parser, log="ok")
 
-    build = cache.Build(build_path=build_path, git=git, runner=command.run)
+    repo.prepare(repository=repository, clone_path=clone_path)
 
-    builds = []
+    with cache.Cache(cache_path=build_path, unique_name=repo.unique_name) as cas:
 
-    if r.workingtree_path:
-        builds.append(build.workingtree(workingtree_path=r.workingtree_path))
+        workingtree_generator = cache.WorkingtreeGenerator(
+            repository=repo,
+            build_path=build_path, sphinx=sphinx)
 
-    for tag in r.tags():
-        builds.append(build.tag(repository_path=r.repository_path, tag=tag))
+        git_branch_generator = cache.GitBranchGenerator(
+            repository=repo,
+            build_path=build_path, sphinx=sphinx, git=git, cache=cas)
 
-    for branch in r.branches():
-        builds.append(
-            build.branch(repository_path=r.repository_path, branch=branch))
+        git_tag_generator = cache.GitTagGenerator(
+            repository=repo,
+            build_path=build_path, sphinx=sphinx, git=git, cache=cas)
 
-    for b in builds:
-        b.run()
+        task_generator = cache.TaskFactory()
+        task_generator.add_generator(generator=workingtree_generator)
+        task_generator.add_generator(generator=git_branch_generator)
+        task_generator.add_generator(generator=git_tag_generator)
+
+        tasks = task_generator.tasks()
+
+        for task in tasks:
+
+            try:
+                result = task.run()
+                print(result)
+
+            except run_error.RunError as re:
+                print(re)
 
     # for tags in r.tags():
     #     tasks.push(BuildTag(path=r.repository_path, tag=tag))

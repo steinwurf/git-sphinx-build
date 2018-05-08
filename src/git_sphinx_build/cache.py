@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 
 from . import run_error
 
@@ -67,106 +68,172 @@ class Sphinx(object):
         """
         self.runner = runner
 
-    def build(self, sourcedir, outputdir, cwd, **kwargs):
+    def build(self, source_path, output_path, cwd, **kwargs):
 
         # Running sphinx-build will fail if the repository does
         # not have working docs for the given branch, tag etc.
 
-        args = ['sphinx-build', '-b', 'html', sourcedir, outputdir]
+        args = ['sphinx-build', '-b', 'html', source_path, output_path]
         self.runner(args, cwd=cwd)
 
 
-class BuildDirectory(object):
+class WorkingtreeTask(object):
 
-    def __init__(self, sphinx, log):
-        """
-        : param build_path: The path to the build directory as a string. The
-            build directory is where the build files(HTML) will be generated.
-            The different builds will be available as subdirectories in the
-            build_path.
-        :param runner: A command.run function.
-        """
-        self.sphinx = sphinx
-        self.log = log
-
-    def run(self, source_path, output_path, cwd, **kwargs):
-
-        try:
-
-            self.sphinx.build(sourcedir=source_path,
-                              outputdir=output_path, cwd=cwd, **kwargs)
-
-        except run_error.RunError as re:
-            self.log.debug(re)
-            return None
-
-        return self.outputdir
-
-
-class BuildWorkingTree(object):
-
-    def __init__(self, build_directory):
-        """
-        : param build_path: The path to the build directory as a string. The
-            build directory is where the build files(HTML) will be generated.
-            The different builds will be available as subdirectories in the
-            build_path.
-        :param runner: A command.run function.
-        """
-        self.build_directory = build_directory
-
-    def run(self, cwd, **kwargs):
-
-        return self.build_directory.run(
-            build_dir='workingtree', cwd=cwd)
-
-
-class BuildGit(object):
-
-    def __init__(self, build_directory, checkout, git):
-        """
-        : param build_path: The path to the build directory as a string. The
-            build directory is where the build files(HTML) will be generated.
-            The different builds will be available as subdirectories in the
-            build_path.
-        :param runner: A command.run function.
-        """
-        self.build_directory = build_directory
-        self.git = git
-        self.checkout = checkout
-
-    def run(self, cwd, **kwargs):
-
-        self.git.checkout(branch=self.checkout, cwd=self.repository_path)
-
-        args = ['sphinx-build', '-b', 'html',
-                self.repository_path, self.html_path]
-
-        self.runner(args, cwd=self.build_path)
-
-        return self.html_path
-
-
-class Builder(object):
-
-    def __init__(self, build_path, git, runner):
+    def __init__(self, workingtree_path, build_path, sphinx):
+        self.workingtree_path = workingtree_path
         self.build_path = build_path
+        self.sphinx = sphinx
+
+    def run():
+
+        output_path = os.path.join(self.build_path, 'workingtree')
+
+        self.sphinx.build(source_path=self.workingtree_path,
+                          output_path=output_path, cwd=self.build_path)
+
+        return {'type': 'workingtree', 'slug': 'workingtree',
+                'path': output_path}
+
+
+class WorkingtreeGenerator(object):
+
+    def __init__(self, repository, build_path, sphinx):
+        self.repository = repository
+        self.build_path = build_path
+        self.sphinx = sphinx
+
+    def tasks(self):
+
+        if self.repository.workingtree_path:
+
+            task = WorkingtreeTask(
+                workingtree_path=self.repository.workingtree_path,
+                build_path=self.build_path,
+                sphinx=self.sphinx)
+
+            return [task]
+
+        else:
+
+            return []
+
+
+class GitTask(object):
+
+    def __init__(self, checkout_type, checkout, repository_path, build_path,
+                 sphinx, git, cache):
+
+        self.checkout_type = checkout_type
+        self.checkout = checkout
+        self.repository_path = repository_path
+        self.build_path = build_path
+        self.sphinx = sphinx
         self.git = git
-        self.runner = runner
+        self.cache = cache
 
-    def workingtree(self, workingtree_path):
-        return BuildWorkingTree(
-            repository_path=workingtree_path,
-            build_path=self.build_path, runner=self.runner)
+    def run(self):
 
-    def tag(self, repository_path, tag):
+        cwd = self.repository_path
 
-        return BuildGit(
-            repository_path=repository_path, build_path=self.build_path,
-            category='tag', checkout=tag, git=self.git, runner=self.runner)
+        # https://stackoverflow.com/a/8888015/1717320
+        self.git.reset(branch=self.checkout, hard=True, cwd=cwd)
 
-    def branch(self, repository_path, branch):
+        print(self.build_path)
+        print(self.checkout_type)
+        print(self.checkout)
 
-        return BuildGit(
-            repository_path=repository_path, build_path=self.build_path,
-            category='branch', checkout=branch, git=self.git, runner=self.runner)
+        output_path = os.path.join(
+            self.build_path, self.checkout_type, self.checkout)
+
+        sha1 = self.git.current_commit(cwd=cwd)
+
+        if self.cache.match(sha1=sha1):
+            path = self.cache.path(sha1=sha1)
+
+            if path != output_path:
+                shutil.copytree(src=path, dst=output_path)
+
+        else:
+
+            self.sphinx.build(source_path=self.repository_path,
+                              output_path=output_path, cwd=self.build_path)
+
+            self.cache.update(sha1=sha1, path=output_path)
+
+        return {'type': self.checkout_type, 'slug': self.checkout,
+                'path': output_path}
+
+
+class GitBranchGenerator(object):
+
+    def __init__(self, repository, build_path,
+                 sphinx, git, cache):
+
+        self.repository = repository
+        self.build_path = build_path
+        self.sphinx = sphinx
+        self.git = git
+        self.cache = cache
+
+    def tasks(self):
+
+        tasks = []
+
+        for branch in self.repository.branches():
+
+            task = GitTask(checkout_type='branch', checkout=branch,
+                           repository_path=self.repository.repository_path,
+                           build_path=self.build_path, sphinx=self.sphinx,
+                           git=self.git, cache=self.cache)
+
+            tasks.append(task)
+
+        return tasks
+
+
+class GitTagGenerator(object):
+
+    def __init__(self, repository, build_path,
+                 sphinx, git, cache):
+
+        self.repository = repository
+        self.build_path = build_path
+        self.sphinx = sphinx
+        self.git = git
+        self.cache = cache
+
+    def tasks(self):
+
+        tasks = []
+
+        for tag in self.repository.tags():
+
+            task = GitTask(checkout_type='tag', checkout=tag,
+                           repository_path=self.repository.repository_path,
+                           build_path=self.build_path, sphinx=self.sphinx,
+                           git=self.git, cache=self.cache)
+
+            tasks.append(task)
+
+        return tasks
+
+
+class TaskFactory(object):
+
+    def __init__(self):
+        self.generators = []
+
+    def add_generator(self, generator):
+        self.generators.append(generator)
+
+    def tasks(self):
+
+        tasks = []
+
+        for generator in self.generators:
+
+            generator_tasks = generator.tasks()
+
+            tasks += generator_tasks
+
+        return tasks

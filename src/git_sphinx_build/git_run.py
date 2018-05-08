@@ -56,12 +56,16 @@ class GitRun(object):
         args = [self.git_binary, 'pull']
         self.run(args, cwd=cwd)
 
-    def fetch(self, cwd):
+    def fetch(self, all, cwd):
         """
         Runs 'git fetch' in the directory cwd
         """
 
         args = [self.git_binary, 'fetch']
+
+        if all:
+            args.append('--all')
+
         self.run(args, cwd=cwd)
 
     def branch(self, cwd, remote):
@@ -77,7 +81,7 @@ class GitRun(object):
         result = self.run(args, cwd=cwd)
 
         branch = result.stdout.split('\n')
-        branch = [b for b in branch if b != '']
+        branch = [b.strip() for b in branch if b != '']
 
         if remote:
             return branch
@@ -95,6 +99,17 @@ class GitRun(object):
             raise RuntimeError('Failed to locate current branch')
 
         return current, others
+
+    def reset(self, hard, branch, cwd):
+        args = [self.git_binary, 'reset']
+
+        if hard:
+            args.append('--hard')
+
+        args.append(branch)
+        args.append('--')
+
+        self.run(args, cwd=cwd)
 
     def current_branch(self, cwd):
         """
