@@ -109,3 +109,18 @@ def environment(download_path):
     env.update({'PYTHONPATH': download_path})
 
     return env
+
+
+class VirtualEnvDownloader(object):
+
+    def __init__(self, git=None, download=None):
+        pass
+
+    def download(self):
+        pass
+
+
+class VirtualEnvRunner(object):
+
+    def __init__(self, downloader):
+        pass
