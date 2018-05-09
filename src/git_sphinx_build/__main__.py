@@ -72,6 +72,15 @@ class Repository(object):
         return remote
 
 
+class BuildProperties(object):
+
+    def environement(self):
+        pass
+
+    def docs_path(self):
+        pass
+
+
 @click.command()
 @click.argument('repository')
 @click.option('--clone_path')
@@ -85,42 +94,43 @@ def cli(repository, clone_path, build_path):
 
     git = git_run.GitRun(git_binary='git', runner=command.run)
     parser = git_url_parser.GitUrlParser()
+    return
 
-    sphinx = cache.Sphinx(runner=command.run)
+    # sphinx = cache.Sphinx(runner=command.run)
 
-    repo = Repository(git=git, git_url_parser=parser, log="ok")
+    # repo = Repository(git=git, git_url_parser=parser, log="ok")
 
-    repo.prepare(repository=repository, clone_path=clone_path)
+    # repo.prepare(repository=repository, clone_path=clone_path)
 
-    with cache.Cache(cache_path=build_path, unique_name=repo.unique_name) as cas:
+    # with cache.Cache(cache_path=build_path, unique_name=repo.unique_name) as cas:
 
-        workingtree_generator = cache.WorkingtreeGenerator(
-            repository=repo,
-            build_path=build_path, sphinx=sphinx)
+    #     workingtree_generator = cache.WorkingtreeGenerator(
+    #         repository=repo,
+    #         build_path=build_path, sphinx=sphinx)
 
-        git_branch_generator = cache.GitBranchGenerator(
-            repository=repo,
-            build_path=build_path, sphinx=sphinx, git=git, cache=cas)
+    #     git_branch_generator = cache.GitBranchGenerator(
+    #         repository=repo,
+    #         build_path=build_path, sphinx=sphinx, git=git, cache=cas)
 
-        git_tag_generator = cache.GitTagGenerator(
-            repository=repo,
-            build_path=build_path, sphinx=sphinx, git=git, cache=cas)
+    #     git_tag_generator = cache.GitTagGenerator(
+    #         repository=repo,
+    #         build_path=build_path, sphinx=sphinx, git=git, cache=cas)
 
-        task_generator = cache.TaskFactory()
-        task_generator.add_generator(generator=workingtree_generator)
-        task_generator.add_generator(generator=git_branch_generator)
-        task_generator.add_generator(generator=git_tag_generator)
+    #     task_generator = cache.TaskFactory()
+    #     task_generator.add_generator(generator=workingtree_generator)
+    #     task_generator.add_generator(generator=git_branch_generator)
+    #     task_generator.add_generator(generator=git_tag_generator)
 
-        tasks = task_generator.tasks()
+    #     tasks = task_generator.tasks()
 
-        for task in tasks:
+    #     for task in tasks:
 
-            try:
-                result = task.run()
-                print(result)
+    #         try:
+    #             result = task.run()
+    #             print(result)
 
-            except run_error.RunError as re:
-                log.debug(re)
+    #         except run_error.RunError as re:
+    #             log.debug(re)
 
 
 if __name__ == "__main__":

@@ -9,6 +9,9 @@ import shutil
 from . import git_run
 from . import command
 
+URL = 'https://github.com/pypa/virtualenv.git'
+VERSION = '15.1.0'
+
 
 class VirtualEnv(object):
     """ Simple object which can be used to work within a virtualenv.
@@ -22,81 +25,12 @@ class VirtualEnv(object):
     with '../somefile.txt'.
     """
 
-    def __init__(self, env, cwd, path, runner):
-        """
-        Wraps a created virtualenv
-        """
-        self.env = env
-        self.path = path
-        self.cwd = cwd
+    def __init__(self, virtualenv_root, runner, runner_environment):
+        self.virtualenv_root = virtualenv_root
         self.runner = runner
+        self.runner_environment = runner_environment
 
-        # Make sure the virtualevn Python executable is first in PATH
-        if sys.platform == 'win32':
-            python_path = os.path.join(path, 'Scripts')
-        else:
-            python_path = os.path.join(path, 'bin')
-
-        print(self.env['PATH'])
-
-        self.env['PATH'] = os.path.pathsep.join(
-            [python_path, self.env['PATH']])
-
-        print(self.env['PATH'])
-
-    def run(self, cmd, cwd=None):
-        """ Runs a command in the virtualenv.
-
-        :param cmd: The command to run.
-        :param cwd: The working directory i.e. where to run the command. If not
-            specified the cwd used to create the virtual env will be used.
-        """
-        if not cwd:
-            cwd = self.cwd
-
-        return self.runner(command=cmd, cwd=cwd, env=self.env)
-
-    def pip_local_download(self, pip_packages_path, packages):
-        """ Downloads a set of packages from pip.
-
-        :param pip_packages_path: Path to pip packages (is used when
-            downloading/installing pip packages)
-        :param packages: Package names as string, which should be
-            downloaded.
-        """
-        packages = " ".join(packages)
-
-        self.run('python -m pip download {} --dest {}'.format(
-            packages, pip_packages_path))
-
-    def pip_local_install(self, pip_packages_path, packages):
-        """ Installs a set of packages from pip, using local packages from the
-        path directory.
-
-        :param pip_packages_path: Path to pip packages (is used when
-            downloading/installing pip packages)
-        :param packages: Package names as string, which be installed in the
-            virtualenv
-        """
-        packages = " ".join(packages)
-
-        assert(os.path.isdir(pip_packages_path))
-
-        self.run('python -m pip install --no-index --find-links={} {}'.format(
-            pip_packages_path, packages))
-
-    def pip_install(self, packages):
-        """ Installs a set of packages from pip
-
-        :param packages: Package names as string, which be installed in the
-            virtualenv
-        """
-        packages = " ".join(packages)
-
-        self.run('python -m pip install {}'.format(packages))
-
-    @staticmethod
-    def create(cwd, env=None, runner=None, name=None, overwrite=False):
+    def create(self, name):
         """ Create a new virtual env.
 
         :param ctx: The Waf Context used to run commands.
@@ -114,63 +48,64 @@ class VirtualEnv(object):
             overwrite=False.
         """
 
-        # The Python executable
-        python = sys.executable
+        virtualenv_path = os.path.join(self.virtualenv_root, name)
 
-        if not runner:
-            runner = command.run
+        if not os.path.isdir(virtualenv_path):
 
-        if not env:
-            # Use the current environment
-            env = dict(os.environ)
+            command = ['python', '-m', 'virtualenv', virtualenv_path,
+                       '--no-site-packages']
 
-        if not name:
+            self.runner(command=command, cwd=self.virtualenv_root,
+                        env=self.runner_environment)
 
-            # Make a unique virtualenv for different Python executables
-            # (e.g. 2.x and 3.x)
-            unique = hashlib.sha1(python.encode('utf-8')).hexdigest()[:6]
-            name = 'virtualenv-{}'.format(unique)
+        # Create a new environment based on the new virtualenv
+        env = dict(os.environ)
 
-        # If no virtualenv exists - we create it
-        path = os.path.join(cwd, name)
+        # Make sure the virtualenv Python executable is first in PATH
+        if sys.platform == 'win32':
+            python_path = os.path.join(virtualenv_path, 'Scripts')
+        else:
+            python_path = os.path.join(virtualenv_path, 'bin')
 
-        if not os.path.isdir(path):
+        env['PATH'] = os.path.pathsep.join([python_path, self.env['PATH']])
 
-            # Create the new virtualenv - requires the virtualenv module to
-            # be available
-            cmd = [python, '-m', 'virtualenv', name, '--no-site-packages']
+        return env
 
-            runner(command=cmd, cwd=cwd, env=env)
 
-        return VirtualEnv(env=env, path=path, cwd=cwd, runner=runner)
+def default_download_path():
 
-    @staticmethod
-    def default_download_path():
-        return os.path.join(os.path.expanduser("~"), '.git_sphinx_build')
+    # https://stackoverflow.com/a/4028943
+    return os.path.join(os.path.expanduser("~"), '.git_sphinx_build',
+                        'virtualenv_source', VERSION)
 
-    @staticmethod
-    def download(url=None, checkout=None, git=None, download_path=None):
 
-        if not url:
-            url = 'https://github.com/pypa/virtualenv.git'
+def download(git=None, download_path=None):
 
-        if not checkout:
-            checkout = '15.1.0'
+    if not git:
+        # If we don't have git - use the default
+        git = git_run.GitRun()
 
-        if not git:
-            git = git_run.GitRun()
+    if not download_path:
+        # If we don't have a download path - use the default
+        download_path = default_download_path()
 
-        if not download_path:
-            download_path = VirtualEnv.default_download_path()
+    if os.path.isdir(download_path):
 
-        repo_name = 'virtualenv-' + checkout
-        repo_path = os.path.join(download_path, repo_name)
+        # We already have it
+        return download_path
 
-        if os.path.isdir(repo_path):
-            # We already downloaded the virtualevn
-            return repo_path
+    # We do not have it - lets clone
+    os.makedirs(download_path)
 
-        git.clone(repository=url, directory=repo_name, cwd=download_path)
-        git.checkout(branch=checkout, cwd=repo_path)
+    git.clone(repository=URL, directory=download_path, cwd=download_path)
+    git.checkout(branch=VERSION, cwd=download_path)
 
-        return repo_path
+    return download_path
+
+
+def environment(download_path):
+
+    env = dict(os.environ)
+    env.update({'PYTHONPATH': download_path})
+
+    return env
