@@ -55,7 +55,7 @@ class VirtualEnv(object):
         return env
 
 
-def from_git(git, clone_path, prompt_class, log):
+def prompt_from_git(git, clone_path, prompt_class, log):
     """ This method will construct the VirtualEvn with a command where
         the virtualenv is in the path.
     """
