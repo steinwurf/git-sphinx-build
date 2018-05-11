@@ -5,9 +5,11 @@ import os
 import sys
 import hashlib
 import shutil
+import logging
 
 from . import git_run
 from . import command
+from . import commandline
 
 URL = 'https://github.com/pypa/virtualenv.git'
 VERSION = '15.1.0'
@@ -25,19 +27,19 @@ class VirtualEnv(object):
     with '../somefile.txt'.
     """
 
-    def __init__(self, process, process_factory, log):
-        self.process = process
-        self.process_factory = process_factory
-        self.log = log
+    def __init__(self, prompt=None, log=None):
 
-    def create(self, path):
+        self.prompt = prompt if prompt else commandline.Prompt()
+        self.log = log if log else logging.getLogger(__name__)
+
+    def create_environment(self, path):
 
         if not os.path.isdir(path):
 
             args = ['python', '-m', 'virtualenv', path,
                     '--no-site-packages']
 
-            self.process.run(command=args)
+            self.prompt.run(command=args)
 
         # Create a new environment based on the new virtualenv
         env = dict(os.environ)
@@ -50,8 +52,10 @@ class VirtualEnv(object):
 
         env['PATH'] = os.path.pathsep.join([python_path, env['PATH']])
 
+        return env
 
-def from_git(git, clone_path, process_factory, log):
+
+def from_git(git, clone_path, prompt_class, log):
     """ This method will construct the VirtualEvn with a command where
         the virtualenv is in the path.
     """
@@ -72,8 +76,7 @@ def from_git(git, clone_path, process_factory, log):
     env = dict(os.environ)
     env.update({'PYTHONPATH': clone_path})
 
-    process = process_factory.build()
-    process.env = env
+    process = prompt_class(env=env)
 
     return VirtualEnv(process=process, process_factory=process_factory,
                       log=log)
