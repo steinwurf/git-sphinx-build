@@ -15,7 +15,6 @@ def run(command, cwd, **kwargs):
     :param kwargs: Keyword arguments passed to Popen(...)
     :return: A RunResult object representing the result of the command
     """
-    print(str(command))
 
     if isinstance(command, compat.string_type):
         kwargs['shell'] = True
@@ -59,3 +58,37 @@ def run(command, cwd, **kwargs):
         raise run_error.RunError(result)
 
     return result
+
+
+class Command(object):
+
+    def __init__(self):
+        self.cwd = os.getcwd()
+        self.env = dict(os.environ)
+        self.stdout = subprocess.PIPE
+        self.stderr = subprocess.PIPE
+
+    def run(self, command):
+
+        return run(command=command, cwd=self.cwd, evn=self.env,
+                   stdout=self.stdout, stderr=self.stderr)
+
+
+class Process(object):
+
+    def __init__(self):
+        self.cwd = os.getcwd()
+        self.env = dict(os.environ)
+        self.stdout = subprocess.PIPE
+        self.stderr = subprocess.PIPE
+
+    def run(self, command):
+
+        return run(command=command, cwd=self.cwd, evn=self.env,
+                   stdout=self.stdout, stderr=self.stderr)
+
+
+class ProcessFactory(object):
+
+    def build(self):
+        return Process()

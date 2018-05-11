@@ -25,102 +25,55 @@ class VirtualEnv(object):
     with '../somefile.txt'.
     """
 
-    def __init__(self, virtualenv_root, runner, runner_environment):
-        self.virtualenv_root = virtualenv_root
-        self.runner = runner
-        self.runner_environment = runner_environment
+    def __init__(self, process, process_factory, log):
+        self.process = process
+        self.process_factory = process_factory
+        self.log = log
 
-    def create(self, name):
-        """ Create a new virtual env.
+    def create(self, path):
 
-        :param ctx: The Waf Context used to run commands.
-        :param cwd: The working directory, as a string, where the virtualenv
-            will be created and where the commands will run.
-        :param env: The environment to use during creation of the virtualenv,
-            once created the PATH and PYTHONPATH variables will be cleared to
-            reflect the virtualenv. You must make sure that the virtualenv
-            module is avilable. Either as a system package or by specifying the
-            PYTHONPATH variable.
-        :param name: The name of the virtualenv, as a string. If None a default
-            name will be used.
-        :param overwrite: If an existing virtualenv with the same name already
-            exists we will overwrite it. To reuse the virtualenv pass
-            overwrite=False.
-        """
+        if not os.path.isdir(path):
 
-        virtualenv_path = os.path.join(self.virtualenv_root, name)
+            args = ['python', '-m', 'virtualenv', path,
+                    '--no-site-packages']
 
-        if not os.path.isdir(virtualenv_path):
-
-            command = ['python', '-m', 'virtualenv', virtualenv_path,
-                       '--no-site-packages']
-
-            self.runner(command=command, cwd=self.virtualenv_root,
-                        env=self.runner_environment)
+            self.process.run(command=args)
 
         # Create a new environment based on the new virtualenv
         env = dict(os.environ)
 
         # Make sure the virtualenv Python executable is first in PATH
         if sys.platform == 'win32':
-            python_path = os.path.join(virtualenv_path, 'Scripts')
+            python_path = os.path.join(path, 'Scripts')
         else:
-            python_path = os.path.join(virtualenv_path, 'bin')
+            python_path = os.path.join(path, 'bin')
 
-        env['PATH'] = os.path.pathsep.join([python_path, self.env['PATH']])
-
-        return env
+        env['PATH'] = os.path.pathsep.join([python_path, env['PATH']])
 
 
-def default_download_path():
+def from_git(git, clone_path, process_factory, log):
+    """ This method will construct the VirtualEvn with a command where
+        the virtualenv is in the path.
+    """
 
-    # https://stackoverflow.com/a/4028943
-    return os.path.join(os.path.expanduser("~"), '.git_sphinx_build',
-                        'virtualenv_source', VERSION)
+    repo_path = os.path.join(clone_path, VERSION)
 
+    if not os.path.isdir(repo_path):
 
-def download(git=None, download_path=None):
+        log.debug('Cloning {} into {}'.format(URL, repo_path))
 
-    if not git:
-        # If we don't have git - use the default
-        git = git_run.GitRun()
+        git.clone(repository=URL, directory=repo_path,
+                  cwd=clone_path)
 
-    if not download_path:
-        # If we don't have a download path - use the default
-        download_path = default_download_path()
+        git.checkout(branch=VERSION, cwd=repo_path)
 
-    if os.path.isdir(download_path):
-
-        # We already have it
-        return download_path
-
-    # We do not have it - lets clone
-    os.makedirs(download_path)
-
-    git.clone(repository=URL, directory=download_path, cwd=download_path)
-    git.checkout(branch=VERSION, cwd=download_path)
-
-    return download_path
-
-
-def environment(download_path):
+    log.debug('Using virtualenv from {}'.format(URL, repo_path))
 
     env = dict(os.environ)
-    env.update({'PYTHONPATH': download_path})
+    env.update({'PYTHONPATH': clone_path})
 
-    return env
+    process = process_factory.build()
+    process.env = env
 
-
-class VirtualEnvDownloader(object):
-
-    def __init__(self, git=None, download=None):
-        pass
-
-    def download(self):
-        pass
-
-
-class VirtualEnvRunner(object):
-
-    def __init__(self, downloader):
-        pass
+    return VirtualEnv(process=process, process_factory=process_factory,
+                      log=log)
