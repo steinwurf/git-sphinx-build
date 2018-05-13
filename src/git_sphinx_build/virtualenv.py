@@ -76,3 +76,16 @@ class VirtualEnv(object):
         prompt = commandline.Prompt(env=env)
 
         return VirtualEnv(prompt=prompt, log=log)
+
+
+class NameToPathAdapter(object):
+
+    def __init__(self, virtualenv, virtualenv_path):
+        self.virtualenv = virtualenv
+        self.virtualenv_path = virtualenv_path
+
+    def create_environment(self, name):
+
+        path = os.path.join(self.virtualenv_path, name)
+
+        return self.virtualenv.create_environment(path=path)
