@@ -1,42 +1,45 @@
 import mock
 import os
+import sys
 
 import git_sphinx_build
 import git_sphinx_build.virtualenv as venv
 
 
-# def test_virtualenv_download_path():
+def test_virtualenv_from_git(testdirectory):
 
-#     assert venv.default_download_path() != ""
+    git = mock.Mock()
+    log = mock.Mock()
+    clone_path = testdirectory.path()
+
+    virtualenv = venv.VirtualEnv.from_git(
+        git=git, clone_path=clone_path, log=log)
+
+    # The following directory should be in the PYTHONPATH of the virtualenv
+    # prompt
+    virtualenv_path = os.path.join(clone_path, venv.VERSION)
+
+    assert virtualenv.prompt.env['PYTHONPATH'] == virtualenv_path
 
 
-# def test_virtualenv_download(testdirectory):
+def test_virtualenv(testdirectory):
 
-#     venv.download(download_path=testdirectory.path())
+    prompt = mock.Mock()
+    log = mock.Mock()
+    path = os.path.join(testdirectory.path(), 'venv')
 
+    virtualenv = venv.VirtualEnv(prompt=prompt, log=log)
 
-# def test_virtualenv_create(testdirectory):
+    env = virtualenv.create_environment(path=path)
 
-#     # Set a download dir, it should not exist otherwise the test
-#     # will not download one
-#     download_path = os.path.join(testdirectory.path(), 'download')
+    prompt.run.assert_called_once_with(
+        command=['python', '-m', 'virtualenv', path, '--no-site-packages'])
 
-#     # venv.download(download_path=download_path)
+    # Depending on our platform the path should be modified
+    if sys.platform == 'win32':
+        expected_path = os.path.join(path, 'Scripts')
+    else:
+        expected_path = os.path.join(path, 'bin')
 
-#     # Create an environment where the virtualenv is available
-#     #runner_environment = venv.environment(download_path=download_path)
-
-#     #virtualenv_root = testdirectory.mkdir('virtualenv_root')
-
-#     # clone_dir = testdirectory.mkdir('clone')
-#     # create_dir = testdirectory.mkdir('create')
-
-#     # path = VirtualEnv.download(download_path=clone_dir.path())
-
-#     # env = dict(os.environ)
-#     # env.update({'PYTHONPATH': path})
-
-#     # venv = VirtualEnv.create(cwd=testdirectory.path(), env=env)
-
-#     # venv.pip_install(packages=['sphinx'])
-#     # venv.run('sphinx-build --help')
+    # We should be first in the PATH environment variable
+    assert env['PATH'].startswith(expected_path)

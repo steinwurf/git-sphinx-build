@@ -27,10 +27,10 @@ class VirtualEnv(object):
     with '../somefile.txt'.
     """
 
-    def __init__(self, prompt=None, log=None):
+    def __init__(self, prompt, log):
 
-        self.prompt = prompt if prompt else commandline.Prompt()
-        self.log = log if log else logging.getLogger(__name__)
+        self.prompt = prompt
+        self.log = log
 
     def create_environment(self, path):
 
@@ -71,7 +71,7 @@ class VirtualEnv(object):
         log.debug('Using virtualenv from {}'.format(URL, repo_path))
 
         env = dict(os.environ)
-        env.update({'PYTHONPATH': clone_path})
+        env.update({'PYTHONPATH': repo_path})
 
         prompt = commandline.Prompt(env=env)
 

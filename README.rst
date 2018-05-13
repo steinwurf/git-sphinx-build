@@ -41,3 +41,14 @@ The cache will contain the following::
           build
       ]
   }
+
+
+Factories and Dependency Injection
+----------------------------------
+
+Testability is a key feature of any modern software library and one of the key
+techniques for writing testable code is dependency injection (DI).
+
+In Python DI is relatively simple to implement due to the dynamic nature of the
+language.
+
