@@ -54,29 +54,25 @@ class VirtualEnv(object):
 
         return env
 
+    @staticmethod
+    def from_git(git, clone_path, log):
 
-def prompt_from_git(git, clone_path, prompt_class, log):
-    """ This method will construct the VirtualEvn with a command where
-        the virtualenv is in the path.
-    """
+        repo_path = os.path.join(clone_path, VERSION)
 
-    repo_path = os.path.join(clone_path, VERSION)
+        if not os.path.isdir(repo_path):
 
-    if not os.path.isdir(repo_path):
+            log.debug('Cloning {} into {}'.format(URL, repo_path))
 
-        log.debug('Cloning {} into {}'.format(URL, repo_path))
+            git.clone(repository=URL, directory=repo_path,
+                      cwd=clone_path)
 
-        git.clone(repository=URL, directory=repo_path,
-                  cwd=clone_path)
+            git.checkout(branch=VERSION, cwd=repo_path)
 
-        git.checkout(branch=VERSION, cwd=repo_path)
+        log.debug('Using virtualenv from {}'.format(URL, repo_path))
 
-    log.debug('Using virtualenv from {}'.format(URL, repo_path))
+        env = dict(os.environ)
+        env.update({'PYTHONPATH': clone_path})
 
-    env = dict(os.environ)
-    env.update({'PYTHONPATH': clone_path})
+        prompt = commandline.Prompt(env=env)
 
-    process = prompt_class(env=env)
-
-    return VirtualEnv(process=process, process_factory=process_factory,
-                      log=log)
+        return VirtualEnv(prompt=prompt, log=log)
