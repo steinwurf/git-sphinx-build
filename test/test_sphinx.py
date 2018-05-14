@@ -1,39 +1,52 @@
 import mock
 
 import git_sphinx_build
-from git_sphinx_build.cache import Sphinx
-
-
-def test_sphinx_find_conf(testdirectory):
-    nested_a = testdirectory.mkdir('a')
-    nested_b = nested_a.mkdir('b')
-
-    nested_b.write_text(filename='conf.py', data=u'hello', encoding='utf-8')
-
-    runner = mock.Mock()
-    virtualenv = mock.Mock()
-
-    sphinx = Sphinx(runner=runner, virtualenv=virtualenv)
-
-    path = sphinx.find_configuration(source_path=testdirectory.path())
-    assert path == nested_b.path()
+from git_sphinx_build.sphinx import Sphinx
+from git_sphinx_build.build_info import BuildInfo
 
 
 def test_sphinx_build(testdirectory):
+
+    sphinx_config = mock.Mock()
+    sphinx_environment = mock.Mock()
+    prompt = mock.Mock()
+
+    build_info = BuildInfo()
+
+    source_dir = testdirectory.mkdir('sources')
     output_dir = testdirectory.mkdir('output')
-    nested_a = testdirectory.mkdir('a')
-    nested_b = nested_a.mkdir('b')
 
-    # nested_b.write_text(filename='conf.py', data=u'hello', encoding='utf-8')
+    conf_file = source_dir.write_text(
+        filename='conf.py', data=u'bla', encoding='utf-8')
 
-    # runner = mock.Mock()
+    build_info.source_path = source_dir.path()
+    build_info.output_path = output_dir.path()
+    build_info.config_file_path = conf_file
 
-    # sphinx = Sphinx(runner=runner)
+    env = {"PATH": "/tmp"}
 
-    # path = sphinx.build(source_path=testdirectory.path(),
-    #                     output_path=output_dir.path(),
-    #                     cwd=testdirectory.path())
+    build_info.sphinx_env = env
 
-    # runner.assert_called_once_with(
-    #     command=['sphinx-build', '-b', 'html', nested_b.path(),
-    #              output_dir.path()], cwd=testdirectory.path())
+    sphinx = Sphinx(sphinx_config=sphinx_config,
+                    sphinx_environment=sphinx_environment,
+                    prompt=prompt)
+
+    sphinx.build(build_info=build_info)
+
+    sphinx_config.update_build.assert_called_once_with(build_info=build_info)
+    sphinx_environment.create_environment.assert_called_once_with(
+        build_info=build_info)
+
+    command = ['sphinx-build', '-b', 'html']
+
+    # Specify the config file
+    command += ['-c', conf_file]
+
+    # Specify the sources directory
+    command += [source_dir.path()]
+
+    # Specify the outputdir
+    command += [output_dir.path()]
+
+    prompt.run.assert_called_once_with(
+        command=command, cwd=source_dir.path(), env=env)

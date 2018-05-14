@@ -57,6 +57,9 @@ class VirtualEnv(object):
     @staticmethod
     def from_git(git, clone_path, log):
 
+        if not os.path.isdir(clone_path):
+            os.makedirs(clone_path)
+
         repo_path = os.path.join(clone_path, VERSION)
 
         if not os.path.isdir(repo_path):
@@ -80,12 +83,12 @@ class VirtualEnv(object):
 
 class NameToPathAdapter(object):
 
-    def __init__(self, virtualenv, virtualenv_path):
+    def __init__(self, virtualenv, virtualenv_root_path):
         self.virtualenv = virtualenv
-        self.virtualenv_path = virtualenv_path
+        self.virtualenv_root_path = virtualenv_root_path
 
     def create_environment(self, name):
 
-        path = os.path.join(self.virtualenv_path, name)
+        path = os.path.join(self.virtualenv_root_path, name)
 
         return self.virtualenv.create_environment(path=path)

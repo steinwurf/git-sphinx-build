@@ -1,8 +1,15 @@
 from . import command
+from . import commandline
 from . import git_run
 from . import git_url_parser
 from . import cache
 from . import run_error
+from . import sphinx
+from . import sphinx_config
+from . import sphinx_environment
+from . import virtualenv
+from . import tasks
+from . import build_info
 
 import click
 import tempfile
@@ -31,7 +38,7 @@ class Repository(object):
         # A unique name computed based on the git URL
         self.unique_name = None
 
-    def prepare(self, repository, clone_path):
+    def clone(self, repository, clone_path):
 
         assert repository
         assert os.path.isdir(clone_path)
@@ -72,15 +79,6 @@ class Repository(object):
         return remote
 
 
-class BuildProperties(object):
-
-    def environement(self):
-        pass
-
-    def docs_path(self):
-        pass
-
-
 @click.command()
 @click.argument('repository')
 @click.option('--clone_path')
@@ -94,43 +92,58 @@ def cli(repository, clone_path, build_path):
 
     git = git_run.GitRun(git_binary='git', runner=command.run)
     parser = git_url_parser.GitUrlParser()
-    return
 
-    # sphinx = cache.Sphinx(runner=command.run)
+    venv = virtualenv.VirtualEnv.from_git(
+        git=git, clone_path=os.path.join(clone_path, 'local-virtualenv'),
+        log=log)
 
-    # repo = Repository(git=git, git_url_parser=parser, log="ok")
+    venv = virtualenv.NameToPathAdapter(
+        virtualenv=venv,
+        virtualenv_root_path=os.path.join(clone_path, 'build_environements'))
 
-    # repo.prepare(repository=repository, clone_path=clone_path)
+    environment = sphinx_environment.SphinxEnvironment(
+        prompt=commandline.Prompt(), virtualenv=venv)
 
-    # with cache.Cache(cache_path=build_path, unique_name=repo.unique_name) as cas:
+    config = sphinx_config.SphinxConfig()
 
-    #     workingtree_generator = cache.WorkingtreeGenerator(
-    #         repository=repo,
-    #         build_path=build_path, sphinx=sphinx)
+    spnx = sphinx.Sphinx(sphinx_config=config,
+                         sphinx_environment=environment,
+                         prompt=commandline.Prompt())
 
-    #     git_branch_generator = cache.GitBranchGenerator(
-    #         repository=repo,
-    #         build_path=build_path, sphinx=sphinx, git=git, cache=cas)
+    repo = Repository(git=git, git_url_parser=parser, log="ok")
 
-    #     git_tag_generator = cache.GitTagGenerator(
-    #         repository=repo,
-    #         build_path=build_path, sphinx=sphinx, git=git, cache=cas)
+    repo.clone(repository=repository, clone_path=clone_path)
 
-    #     task_generator = cache.TaskFactory()
-    #     task_generator.add_generator(generator=workingtree_generator)
-    #     task_generator.add_generator(generator=git_branch_generator)
-    #     task_generator.add_generator(generator=git_tag_generator)
+    with cache.Cache(cache_path=build_path, unique_name=repo.unique_name) as cas:
 
-    #     tasks = task_generator.tasks()
+        workingtree_generator = tasks.WorkingtreeGenerator(
+            repository=repo,
+            build_path=build_path, sphinx=spnx)
 
-    #     for task in tasks:
+        git_branch_generator = tasks.GitBranchGenerator(
+            repository=repo,
+            build_path=build_path, sphinx=spnx, git=git, cache=cas)
 
-    #         try:
-    #             result = task.run()
-    #             print(result)
+        # git_tag_generator = tasks.GitTagGenerator(
+        #     repository=repo,
+        #     build_path=build_path, sphinx=sphinx, git=git, cache=cas)
 
-    #         except run_error.RunError as re:
-    #             log.debug(re)
+        task_generator = tasks.TaskFactory()
+        task_generator.add_generator(generator=workingtree_generator)
+        task_generator.add_generator(generator=git_branch_generator)
+        # task_generator.add_generator(generator=git_tag_generator)
+
+        tsk = task_generator.tasks()
+
+        for task in tsk:
+
+            try:
+                bi = build_info.BuildInfo()
+                result = task.run(build_info=bi)
+                print(bi)
+
+            except RuntimeError as re:
+                log.debug(re)
 
 
 if __name__ == "__main__":

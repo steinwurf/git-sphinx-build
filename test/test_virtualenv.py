@@ -43,3 +43,19 @@ def test_virtualenv(testdirectory):
 
     # We should be first in the PATH environment variable
     assert env['PATH'].startswith(expected_path)
+
+
+def test_virtualenv_name_to_path_adapter(testdirectory):
+
+    virtualenv = mock.Mock()
+    virtualenv_root_path = testdirectory.path()
+
+    adapter = venv.NameToPathAdapter(
+        virtualenv=virtualenv, virtualenv_root_path=virtualenv_root_path)
+
+    adapter.create_environment(name='ok')
+
+    virtualenv_path = os.path.join(virtualenv_root_path, 'ok')
+
+    virtualenv.create_environment.assert_called_once_with(
+        path=virtualenv_path)
