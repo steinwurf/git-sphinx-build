@@ -21,7 +21,7 @@ def test_sphinx_build(testdirectory):
 
     build_info.source_path = source_dir.path()
     build_info.output_path = output_dir.path()
-    build_info.config_file_path = conf_file
+    build_info.config_dir = source_dir.path()
 
     env = {"PATH": "/tmp"}
 
@@ -40,7 +40,7 @@ def test_sphinx_build(testdirectory):
     command = ['sphinx-build', '-b', 'html']
 
     # Specify the config file
-    command += ['-c', conf_file]
+    command += ['-c', source_dir.path()]
 
     # Specify the sources directory
     command += [source_dir.path()]

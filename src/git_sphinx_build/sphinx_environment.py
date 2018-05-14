@@ -5,6 +5,9 @@ import os
 import sys
 import hashlib
 
+import git_sphinx_build.virtualenv
+import git_sphinx_build.commandline
+
 
 class SphinxEnvironment(object):
     """ Update the environment to have the needed dependencies in PATH.
@@ -72,3 +75,6 @@ class SphinxEnvironment(object):
         name = 'sphinx-virtualenv-' + requirements_hash + '-' + python_hash
 
         return name
+
+
+def build(application_info):

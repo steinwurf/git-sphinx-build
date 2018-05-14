@@ -26,7 +26,7 @@ class Sphinx(object):
         command = ['sphinx-build', '-b', 'html']
 
         # Specify the config file
-        command += ['-c', build_info.config_file_path]
+        command += ['-c', build_info.config_dir]
 
         # Specify the sources directory
         command += [build_info.source_path]

@@ -1,9 +1,8 @@
 import git_sphinx_build
-#import git_sphinx_build.run
+import git_sphinx_build.git
 
 
 def test_git(testdirectory):
-    git = git_sphinx_build.GitRun(
-        git_binary="git", runner=git_sphinx_build.run)
+    git = git_sphinx_build.git.build()
 
     print(git.version(cwd=testdirectory.path()))
