@@ -7,14 +7,14 @@ import sys
 
 class WorkingtreeTask(object):
 
-    def __init__(self, workingtree_path, build_path, sphinx):
+    def __init__(self, workingtree_path, output_path, sphinx):
         self.workingtree_path = workingtree_path
-        self.build_path = build_path
+        self.output_path = output_path
         self.sphinx = sphinx
 
     def run(self, build_info):
 
-        build_info.output_path = os.path.join(self.build_path, 'workingtree')
+        build_info.output_path = os.path.join(self.output_path, 'workingtree')
         build_info.repository_path = self.workingtree_path
         build_info.slug = 'workingtree'
         build_info.type = 'workingtree'
@@ -24,9 +24,9 @@ class WorkingtreeTask(object):
 
 class WorkingtreeGenerator(object):
 
-    def __init__(self, repository, build_path, sphinx):
+    def __init__(self, repository, output_path, sphinx):
         self.repository = repository
-        self.build_path = build_path
+        self.output_path = output_path
         self.sphinx = sphinx
 
     def tasks(self):
@@ -35,7 +35,7 @@ class WorkingtreeGenerator(object):
 
             task = WorkingtreeTask(
                 workingtree_path=self.repository.workingtree_path,
-                build_path=self.build_path,
+                output_path=self.output_path,
                 sphinx=self.sphinx)
 
             return [task]
@@ -47,13 +47,13 @@ class WorkingtreeGenerator(object):
 
 class GitTask(object):
 
-    def __init__(self, checkout_type, checkout, repository_path, build_path,
+    def __init__(self, checkout_type, checkout, repository_path, output_path,
                  sphinx, git, cache):
 
         self.checkout_type = checkout_type
         self.checkout = checkout
         self.repository_path = repository_path
-        self.build_path = build_path
+        self.output_path = output_path
         self.sphinx = sphinx
         self.git = git
         self.cache = cache
@@ -66,7 +66,7 @@ class GitTask(object):
         self.git.reset(branch=self.checkout, hard=True, cwd=cwd)
 
         output_path = os.path.join(
-            self.build_path, self.checkout_type, self.checkout)
+            self.output_path, self.checkout_type, self.checkout)
 
         sha1 = self.git.current_commit(cwd=cwd)
 
@@ -92,11 +92,11 @@ class GitTask(object):
 
 class GitBranchGenerator(object):
 
-    def __init__(self, repository, build_path,
+    def __init__(self, repository, output_path,
                  sphinx, git, cache):
 
         self.repository = repository
-        self.build_path = build_path
+        self.output_path = output_path
         self.sphinx = sphinx
         self.git = git
         self.cache = cache
@@ -109,7 +109,7 @@ class GitBranchGenerator(object):
 
             task = GitTask(checkout_type='branch', checkout=branch,
                            repository_path=self.repository.repository_path,
-                           build_path=self.build_path, sphinx=self.sphinx,
+                           output_path=self.output_path, sphinx=self.sphinx,
                            git=self.git, cache=self.cache)
 
             tasks.append(task)
@@ -119,11 +119,11 @@ class GitBranchGenerator(object):
 
 class GitTagGenerator(object):
 
-    def __init__(self, repository, build_path,
+    def __init__(self, repository, output_path,
                  sphinx, git, cache):
 
         self.repository = repository
-        self.build_path = build_path
+        self.output_path = output_path
         self.sphinx = sphinx
         self.git = git
         self.cache = cache
@@ -136,7 +136,7 @@ class GitTagGenerator(object):
 
             task = GitTask(checkout_type='tag', checkout=tag,
                            repository_path=self.repository.repository_path,
-                           build_path=self.build_path, sphinx=self.sphinx,
+                           output_path=self.output_path, sphinx=self.sphinx,
                            git=self.git, cache=self.cache)
 
             tasks.append(task)

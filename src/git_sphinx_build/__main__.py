@@ -1,90 +1,77 @@
-from . import command
-import git_sphinx_build.commandline
-import git_sphinx_build.repository
-import git_sphinx_build.git
-from . import git_url_parser
-from . import cache
-from . import run_error
-from . import sphinx
-from . import sphinx_config
-from . import sphinx_environment
-from . import virtualenv
-from . import tasks
-from . import build_info
-
 import click
 import tempfile
 import hashlib
 import os
 import logging
+import json
+
+import git_sphinx_build.factory
+import git_sphinx_build.build_info
 
 
 @click.command()
 @click.argument('repository')
-@click.option('--clone_path')
-@click.option('--build_path')
+@click.option('--data_path')
+@click.option('--output_path')
 #@click.option('--remote_only')
-def cli(repository, clone_path, build_path):
+def cli(repository, data_path, output_path):
 
     logging.basicConfig(filename='git_sphinx_build.log', level=logging.DEBUG)
 
-    log = logging.getLogger(__name__)
+    log = logging.getLogger('git_sphinx_build.main')
 
-    git = git_sphinx_build.git.GitRun(git_binary='git', runner=command.run)
-    parser = git_url_parser.GitUrlParser()
+    # Resolve the repository
+    factory = git_sphinx_build.factory.resolve_factory(
+        data_path=data_path)
 
-    venv = virtualenv.VirtualEnv.from_git(
-        git=git, clone_path=os.path.join(clone_path, 'local-virtualenv'),
-        log=log)
+    git_repository = factory.build(name='git_repository')
+    git_repository.clone(repository=repository)
 
-    venv = virtualenv.NameToPathAdapter(
-        virtualenv=venv,
-        virtualenv_root_path=os.path.join(clone_path, 'build_environements'))
+    # Instantiate the cache
+    cache_factory = git_sphinx_build.factory.cache_factory(
+        data_path=data_path, unique_name=git_repository.unique_name)
 
-    environment = sphinx_environment.SphinxEnvironment(
-        prompt=git_sphinx_build.commandline.Prompt(), virtualenv=venv)
+    cache = cache_factory.build(name='cache')
 
-    config = sphinx_config.SphinxConfig()
+    # Build the documentation
+    factory = git_sphinx_build.factory.build_factory(
+        data_path=data_path, output_path=output_path,
+        git_repository=git_repository, cache=cache)
 
-    spnx = sphinx.Sphinx(sphinx_config=config,
-                         sphinx_environment=environment,
-                         prompt=git_sphinx_build.commandline.Prompt())
+    versions = {
+        'output_path': output_path,
+        'builds': []
+    }
 
-    repo = git_sphinx_build.repository.Repository(
-        git=git, git_url_parser=parser, log="ok")
+    with cache:
 
-    repo.clone(repository=repository, clone_path=clone_path)
+        task_generator = factory.build(name='task_generator')
 
-    with cache.Cache(cache_path=build_path, unique_name=repo.unique_name) as cas:
+        tasks = task_generator.tasks()
 
-        workingtree_generator = tasks.WorkingtreeGenerator(
-            repository=repo,
-            build_path=build_path, sphinx=spnx)
-
-        git_branch_generator = tasks.GitBranchGenerator(
-            repository=repo,
-            build_path=build_path, sphinx=spnx, git=git, cache=cas)
-
-        # git_tag_generator = tasks.GitTagGenerator(
-        #     repository=repo,
-        #     build_path=build_path, sphinx=sphinx, git=git, cache=cas)
-
-        task_generator = tasks.TaskFactory()
-        task_generator.add_generator(generator=workingtree_generator)
-        task_generator.add_generator(generator=git_branch_generator)
-        # task_generator.add_generator(generator=git_tag_generator)
-
-        tsk = task_generator.tasks()
-
-        for task in tsk:
+        for task in tasks:
 
             try:
-                bi = build_info.BuildInfo()
-                result = task.run(build_info=bi)
-                print(bi)
+                build_info = git_sphinx_build.build_info.BuildInfo()
+                task.run(build_info=build_info)
+
+                version = {
+                    'slug': build_info.slug,
+                    'type': build_info.type,
+                    'path': build_info.output_path
+                }
+
+                versions['builds'].append(version)
 
             except RuntimeError as re:
                 log.debug(re)
+
+    with open('versions.json', 'w') as versions_json:
+
+        json.dump(versions, versions_json, indent=2, sort_keys=True,
+                  separators=(',', ': '))
+
+    # If needed push the docs
 
 
 if __name__ == "__main__":

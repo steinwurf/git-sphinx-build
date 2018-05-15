@@ -78,3 +78,4 @@ class SphinxEnvironment(object):
 
 
 def build(application_info):
+    pass
