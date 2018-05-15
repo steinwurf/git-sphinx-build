@@ -9,11 +9,10 @@ import git_sphinx_build.factory
 import git_sphinx_build.build_info
 
 
-@click.command()
-@click.argument('repository')
+@click.group(invoke_without_command=True)
+@click.option('--repository')
 @click.option('--data_path')
 @click.option('--output_path')
-#@click.option('--remote_only')
 def cli(repository, data_path, output_path):
 
     logging.basicConfig(filename='git_sphinx_build.log', level=logging.DEBUG)
@@ -72,6 +71,12 @@ def cli(repository, data_path, output_path):
                   separators=(',', ': '))
 
     # If needed push the docs
+
+
+@cli.command()
+@click.argument('DEST_BRANCH')
+def push(dest_branch):
+    click.echo('push to %s' % dest_branch)
 
 
 if __name__ == "__main__":
